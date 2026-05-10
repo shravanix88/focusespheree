@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: focussphere
+    env: docker
+
+    
+    # Environment variables
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: DB_URL
+        value: ${DB_URL}
+      - key: DB_USERNAME
+        value: ${DB_USERNAME}
+      - key: DB_PASSWORD
+        value: ${DB_PASSWORD}
+      - key: DB_DRIVER
+        value: ${DB_DRIVER}
+      - key: DB_POOL_SIZE
+        value: 20
+      - key: ADMIN_NAME
+        value: ${ADMIN_NAME}
+      - key: ADMIN_EMAIL
+        value: ${ADMIN_EMAIL}
+      - key: ADMIN_PASSWORD
+        value: ${ADMIN_PASSWORD}
+      - key: ADMIN_PHONE
+        value: ${ADMIN_PHONE}
+      - key: ADMIN_ROLL_NO
+        value: ${ADMIN_ROLL_NO}
+      - key: MAIL_HOST
+        value: ${MAIL_HOST}
+      - key: MAIL_PORT
+        value: ${MAIL_PORT}
+      - key: MAIL_USERNAME
+        value: ${MAIL_USERNAME}
+      - key: MAIL_PASSWORD
+        value: ${MAIL_PASSWORD}
+    
+    # Resource configuration
+    plan: standard
+    
+    # Disk for persistent storage if needed
+    disk:
+      name: data
+      mountPath: /tmp/data
+      sizeGB: 1
+    
+    # Health check
+    healthCheckPath: /actuator/health
+    
+    # Auto-deploy on git push
+    autoDeploy: true
