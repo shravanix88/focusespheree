@@ -204,6 +204,24 @@ public class UserService {
     }
 
     @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+        
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new IllegalArgumentException("Admin users cannot be deleted.");
+        }
+
+        Set<Long> userIds = Set.of(userId);
+        membershipRepository.deleteByUserIdIn(userIds);
+        messageRepository.deleteBySenderIdIn(userIds);
+        membershipRepository.deleteByRoomCreatedByIdIn(userIds);
+        messageRepository.deleteByRoomCreatedByIdIn(userIds);
+        roomRepository.deleteByCreatedByIdIn(userIds);
+        userRepository.delete(user);
+    }
+
+    @Transactional
     public void purgeNonAdminUsers() {
         List<User> nonAdminUsers = userRepository.findAll().stream()
                 .filter(user -> user.getRole() == UserRole.USER)

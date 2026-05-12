@@ -31,6 +31,14 @@
         <c:when test="${activeSection == 'users'}">
             <h2>Manage Users</h2>
             <p class="subtext">All registered users are shown here.</p>
+            <c:if test="${not empty sessionScope.flashAdminMessage}">
+                <div class="msg ok">${sessionScope.flashAdminMessage}</div>
+                <c:remove var="flashAdminMessage" scope="session" />
+            </c:if>
+            <c:if test="${not empty sessionScope.flashAdminError}">
+                <div class="msg error">${sessionScope.flashAdminError}</div>
+                <c:remove var="flashAdminError" scope="session" />
+            </c:if>
             <c:if test="${empty users}">
                 <p class="muted">No users found.</p>
             </c:if>
@@ -44,6 +52,7 @@
                             <th>Phone</th>
                             <th>Roll No</th>
                             <th>Role</th>
+                            <th>Action</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -54,6 +63,16 @@
                                 <td>${u.phone}</td>
                                 <td>${u.rollNo}</td>
                                 <td>${u.role}</td>
+                                <td>
+                                    <c:if test="${u.role != 'ADMIN'}">
+                                        <form method="post" action="/admin/users/${u.id}/delete" style="display:inline;">
+                                            <button type="submit" class="btn-danger" onclick="return confirm('Delete ${u.name}? This action cannot be undone.')">Delete</button>
+                                        </form>
+                                    </c:if>
+                                    <c:if test="${u.role == 'ADMIN'}">
+                                        <span class="muted">-</span>
+                                    </c:if>
+                                </td>
                             </tr>
                         </c:forEach>
                         </tbody>
@@ -64,6 +83,14 @@
         <c:when test="${activeSection == 'rooms'}">
             <h2>Monitor Rooms</h2>
             <p class="subtext">Room activity and visibility overview.</p>
+            <c:if test="${not empty sessionScope.flashAdminMessage}">
+                <div class="msg ok">${sessionScope.flashAdminMessage}</div>
+                <c:remove var="flashAdminMessage" scope="session" />
+            </c:if>
+            <c:if test="${not empty sessionScope.flashAdminError}">
+                <div class="msg error">${sessionScope.flashAdminError}</div>
+                <c:remove var="flashAdminError" scope="session" />
+            </c:if>
             <c:if test="${empty roomMonitorRows}">
                 <p class="muted">No rooms found.</p>
             </c:if>
@@ -78,6 +105,7 @@
                             <th>Created By</th>
                             <th>Members</th>
                             <th>Messages</th>
+                            <th>Action</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -89,6 +117,11 @@
                                 <td>${row.createdBy}</td>
                                 <td>${row.memberCount}</td>
                                 <td>${row.messageCount}</td>
+                                <td>
+                                    <form method="post" action="/admin/rooms/code/${row.roomCode}/delete" style="display:inline;">
+                                        <button type="submit" class="btn-danger" onclick="return confirm('Delete room ${row.roomName}? This action cannot be undone.')">Delete</button>
+                                    </form>
+                                </td>
                             </tr>
                         </c:forEach>
                         </tbody>

@@ -272,9 +272,19 @@ public class RoomService {
         if (user == null || room == null) {
             return false;
         }
-        if (user.getRole() == UserRole.ADMIN || isRoomCreator(room, user) || isUserMember(room, user)) {
+        // ADMIN and room creator have full access
+        if (user.getRole() == UserRole.ADMIN || isRoomCreator(room, user)) {
             return true;
         }
+        // PUBLIC rooms are accessible to everyone
+        if (room.getVisibility() == RoomVisibility.PUBLIC || room.getVisibility() == null) {
+            return true;
+        }
+        // For PRIVATE rooms, check membership
+        if (isUserMember(room, user)) {
+            return true;
+        }
+        // For PRIVATE rooms, check if join request is approved
         return joinRequestRepository.findByRoomAndRequester(room, user)
                 .map(request -> request.getStatus() == JoinRequestStatus.APPROVED)
                 .orElse(false);
@@ -418,5 +428,22 @@ public class RoomService {
             code = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
         } while (roomRepository.existsByPrivateAccessCode(code));
         return code;
+    }
+
+    @Transactional
+    public void deleteRoom(Long roomId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("Room not found."));
+        
+        // Delete all related data
+        joinRequestRepository.deleteAll(joinRequestRepository.findAll().stream()
+                .filter(jr -> jr.getRoom().getId().equals(roomId))
+                .toList());
+        membershipRepository.deleteAll(membershipRepository.findByRoom(room));
+        messageRepository.deleteAll(messageRepository.findByRoomOrderBySentAtAsc(room));
+        roomMembershipHistoryRepository.deleteAll(roomMembershipHistoryRepository.findAll().stream()
+                .filter(rmh -> rmh.getRoom().getId().equals(roomId))
+                .toList());
+        roomRepository.deleteById(roomId);
     }
 }

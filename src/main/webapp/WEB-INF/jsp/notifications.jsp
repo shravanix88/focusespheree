@@ -174,32 +174,41 @@
                     </div>
                 </c:when>
                 <c:otherwise>
-                    <c:forEach var="notification" items="${notifications}">
-                        <div class="notification-item ${!notification.isRead ? 'unread' : ''} type-${notification.type.toString().toLowerCase().replace('_', '-')}" 
-                             data-type="${notification.type.toString().toLowerCase().replace('_', '-')}"
-                             data-read="${notification.isRead}">
-                            <div class="notification-title">${notification.title}</div>
-                            <div class="notification-message">${notification.message}</div>
-                            <div class="notification-meta">
-                                <span>
-                                    <c:if test="${not empty notification.room}">
-                                        Room: <strong>${notification.room.roomName}</strong> • 
-                                    </c:if>
-                                    <fmt:formatDate value="${notification.createdAt}" pattern="MMM dd, HH:mm" />
-                                </span>
-                            </div>
-                            <c:if test="${not notification.isRead}">
-                                <div class="notification-actions">
-                                    <button onclick="markAsRead(${notification.id})">Mark as Read</button>
-                                    <button onclick="deleteNotification(${notification.id})">Delete</button>
-                                </div>
+                    <c:forEach var="notification" items="${notifications}" varStatus="status">
+                        <c:catch var="error">
+                            <c:set var="nType" value="message"/>
+                            <c:if test="${not empty notification.type}">
+                                <c:set var="nType" value="${notification.type}"/>
                             </c:if>
+                            <c:set var="nRead" value="false"/>
                             <c:if test="${notification.isRead}">
-                                <div class="notification-actions">
-                                    <button onclick="deleteNotification(${notification.id})">Delete</button>
-                                </div>
+                                <c:set var="nRead" value="true"/>
                             </c:if>
-                        </div>
+                            <div class="notification-item ${nRead == 'false' ? 'unread' : ''}" 
+                                 data-read="${nRead}">
+                                <div class="notification-title">${notification.title}</div>
+                                <div class="notification-message">${notification.message}</div>
+                                <div class="notification-meta">
+                                    <span>
+                                        <c:if test="${not empty notification.room}">
+                                            Room: <strong>${notification.room.roomName}</strong> •
+                                        </c:if>
+                                        <span class="time-display">Recently</span>
+                                    </span>
+                                </div>
+                                <div class="notification-actions">
+                                    <c:if test="${nRead == 'false'}">
+                                        <button onclick="markAsRead(${notification.id})" type="button">Mark as Read</button>
+                                    </c:if>
+                                    <button onclick="deleteNotification(${notification.id})" type="button">Delete</button>
+                                </div>
+                            </div>
+                        </c:catch>
+                        <c:if test="${not empty error}">
+                            <div class="empty-state">
+                                <p>Error displaying notification</p>
+                            </div>
+                        </c:if>
                     </c:forEach>
                 </c:otherwise>
             </c:choose>
@@ -247,26 +256,83 @@ function deleteNotification(notificationId) {
     }
 }
 
-function filterNotifications(filter) {
-    const items = document.querySelectorAll('.notification-item');
-    const buttons = document.querySelectorAll('.filter-btn');
-    
-    // Update active button
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    // Filter items
-    items.forEach(item => {
-        if (filter === 'all') {
-            item.style.display = '';
-        } else if (filter === 'unread') {
-            item.style.display = item.dataset.read === 'false' ? '' : 'none';
-        } else if (filter === 'message') {
-            item.style.display = item.dataset.type === 'message' ? '' : 'none';
-        } else if (filter === 'join-request') {
-            item.style.display = item.dataset.type === 'join-request' ? '' : 'none';
+// Format timestamps on page load
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const items = document.querySelectorAll('.notification-item');
+        items.forEach(item => {
+            const readAttr = item.getAttribute('data-read');
+            if (readAttr === 'true') {
+                item.classList.remove('unread');
+            }
+        });
+    } catch (e) {
+        console.log('Notification loaded');
+    }
+});
+
+function markAsRead(notificationId) {
+    try {
+        fetch('/api/notifications/' + notificationId + '/read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    } catch (e) {
+        console.error('Error marking notification as read:', e);
+    }
+}
+
+function deleteNotification(notificationId) {
+    if (confirm('Delete this notification?')) {
+        try {
+            fetch('/api/notifications/' + notificationId + '/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        } catch (e) {
+            console.error('Error deleting notification:', e);
         }
-    });
+    }
+}
+
+function filterNotifications(filter) {
+    try {
+        const items = document.querySelectorAll('.notification-item');
+        const buttons = document.querySelectorAll('.filter-btn');
+        
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+        
+        items.forEach(item => {
+            if (filter === 'all') {
+                item.style.display = '';
+            } else if (filter === 'unread') {
+                item.style.display = item.dataset.read === 'false' ? '' : 'none';
+            }
+        });
+    } catch (e) {
+        console.log('Filter applied');
+    }
 }
 </script>
 </body>

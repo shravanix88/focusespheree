@@ -25,7 +25,7 @@ This document provides step-by-step instructions to deploy FocusSphere on Render
    - Name: `focussphere`
    - Environment: `Java`
    - Runtime: `Java 17`
-   - Build Command: `mvn clean package -DskipTests -Prender`
+   - Build Command: `mvn clean package -DskipTests`
    - Start Command: `java -jar target/focussphere-0.0.1-SNAPSHOT.jar --spring.profiles.active=render --server.port=$PORT`
 
    **Plan:** Choose appropriate plan (Starter/Standard/Pro)
@@ -34,14 +34,22 @@ This document provides step-by-step instructions to deploy FocusSphere on Render
 
 Add the following environment variables in the Render Dashboard:
 
-#### Database Configuration (Choose one option)
+#### Database Configuration (IMPORTANT - Choose ONE option)
 
-**Option A: Using Render PostgreSQL Database**
+**⚠️ CRITICAL: Do NOT use Option C (H2)! It causes data isolation - each user sees different data!**
+
+**Option A: Using Render PostgreSQL Database (RECOMMENDED)**
+1. In Render Dashboard, create a new **PostgreSQL** database:
+   - Name: `focussphere-db`
+   - PostgreSQL Version: 16 or newer
+   - Region: Same as your Web Service
+2. After creation, Render will provide connection details
+3. Add these environment variables to your Web Service:
 ```
 DB_DRIVER=org.postgresql.Driver
-DB_URL=jdbc:postgresql://[your-db-host]:[your-db-port]/focussphere_db
-DB_USERNAME=[your-username]
-DB_PASSWORD=[your-password]
+DB_URL=postgresql://[user]:[password]@[host]:[port]/[database]?sslmode=require
+DB_USERNAME=[username-from-render]
+DB_PASSWORD=[password-from-render]
 DB_POOL_SIZE=20
 ```
 
@@ -54,13 +62,10 @@ DB_PASSWORD=[your-password]
 DB_POOL_SIZE=20
 ```
 
-**Option C: Using H2 Embedded Database (Dev/Demo)**
+**⚠️ Option C: Using H2 Embedded Database (DO NOT USE IN PRODUCTION)**
 ```
-DB_DRIVER=org.h2.Driver
-DB_URL=jdbc:h2:file:/tmp/focussphere_prod;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE
-DB_USERNAME=sa
-DB_PASSWORD=
-DB_POOL_SIZE=10
+This causes data isolation issues where users cannot see each other's rooms!
+Only use for local development testing.
 ```
 
 #### Admin Credentials

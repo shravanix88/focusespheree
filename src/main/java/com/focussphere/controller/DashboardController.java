@@ -1,5 +1,6 @@
 package com.focussphere.controller;
 
+import com.focussphere.model.Notification;
 import com.focussphere.model.User;
 import com.focussphere.model.UserRole;
 import com.focussphere.service.AdminInsightsService;
@@ -9,9 +10,12 @@ import com.focussphere.service.RoomService;
 import com.focussphere.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import java.time.YearMonth;
+import java.util.List;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
@@ -134,6 +138,68 @@ public class DashboardController {
         return "adminDashboard";
     }
 
+    @PostMapping("/admin/users/{userId}/delete")
+    public String deleteUser(@PathVariable Long userId, HttpSession session) {
+        User sessionUser = (User) session.getAttribute("sessionUser");
+        if (sessionUser == null) {
+            return "redirect:/login";
+        }
+        if (sessionUser.getRole() != UserRole.ADMIN) {
+            return "redirect:/dashboard";
+        }
+
+        try {
+            userService.deleteUser(userId);
+            session.setAttribute("flashAdminMessage", "User deleted successfully.");
+        } catch (Exception ex) {
+            session.setAttribute("flashAdminError", ex.getMessage());
+        }
+
+        return "redirect:/admin/users";
+    }
+
+    @PostMapping("/admin/rooms/{roomId}/delete")
+    public String deleteRoom(@PathVariable Long roomId, HttpSession session) {
+        User sessionUser = (User) session.getAttribute("sessionUser");
+        if (sessionUser == null) {
+            return "redirect:/login";
+        }
+        if (sessionUser.getRole() != UserRole.ADMIN) {
+            return "redirect:/dashboard";
+        }
+
+        try {
+            roomService.deleteRoom(roomId);
+            session.setAttribute("flashAdminMessage", "Room deleted successfully.");
+        } catch (Exception ex) {
+            session.setAttribute("flashAdminError", ex.getMessage());
+        }
+
+        return "redirect:/admin/rooms";
+    }
+
+    @PostMapping("/admin/rooms/code/{roomCode}/delete")
+    public String deleteRoomByCode(@PathVariable String roomCode, HttpSession session) {
+        User sessionUser = (User) session.getAttribute("sessionUser");
+        if (sessionUser == null) {
+            return "redirect:/login";
+        }
+        if (sessionUser.getRole() != UserRole.ADMIN) {
+            return "redirect:/dashboard";
+        }
+
+        try {
+            com.focussphere.model.Room room = roomService.findByRoomCode(roomCode.toUpperCase())
+                    .orElseThrow(() -> new IllegalArgumentException("Room not found."));
+            roomService.deleteRoom(room.getId());
+            session.setAttribute("flashAdminMessage", "Room deleted successfully.");
+        } catch (Exception ex) {
+            session.setAttribute("flashAdminError", ex.getMessage());
+        }
+
+        return "redirect:/admin/rooms";
+    }
+
     @GetMapping("/rooms/created")
     public String createdRooms(HttpSession session, Model model) {
         User sessionUser = (User) session.getAttribute("sessionUser");
@@ -176,10 +242,33 @@ public class DashboardController {
             return "redirect:/admin/dashboard";
         }
         
-        model.addAttribute("user", sessionUser);
-        model.addAttribute("notifications", notificationService.getNotificationsForUser(sessionUser));
-        model.addAttribute("unreadCount", notificationService.getUnreadNotificationCount(sessionUser));
-        model.addAttribute("activePage", "notifications");
+        try {
+            model.addAttribute("user", sessionUser);
+            
+            // Get notifications with safe handling
+            List<Notification> userNotifications = new java.util.ArrayList<>();
+            try {
+                List<Notification> fetched = notificationService.getNotificationsForUser(sessionUser);
+                if (fetched != null) {
+                    userNotifications = fetched;
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching notifications: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Always provide a list (never null)
+            model.addAttribute("notifications", userNotifications);
+            model.addAttribute("unreadCount", Math.max(0, notificationService.getUnreadNotificationCount(sessionUser)));
+            model.addAttribute("activePage", "notifications");
+        } catch (Exception e) {
+            System.err.println("Critical error in notifications controller: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("notifications", new java.util.ArrayList<>());
+            model.addAttribute("unreadCount", 0);
+            model.addAttribute("activePage", "notifications");
+            model.addAttribute("error", "Error loading notifications: " + e.getMessage());
+        }
         return "notifications";
     }
 
